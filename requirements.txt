@@ -1,0 +1,5 @@
+kaggle
+pandas
+marimo
+sqlalchemy
+matplotlibpython-dotenv
