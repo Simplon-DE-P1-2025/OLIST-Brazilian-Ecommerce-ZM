@@ -103,6 +103,14 @@ python src/extract.py
 | `olist_sellers_dataset.csv` | 0.17 MB | Informations vendeurs |
 | `product_category_name_translation.csv` | 0.00 MB | Traduction des catégories |
 
+## ✅ Travail réalisé
+
+- Création du script d'extraction `src/extract.py`
+- Téléchargement et extraction des données dans `data/raw/`
+- Ajout de `.env` et `.env.example` pour l'authentification Kaggle
+- Mise à jour de `.gitignore` pour exclure les secrets et les données
+- Création du dossier `notebooks/` pour l'exploration
+
 ## 📁 Structure du Projet
 
 ```
