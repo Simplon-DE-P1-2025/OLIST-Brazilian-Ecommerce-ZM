@@ -190,7 +190,17 @@ def _(mo, pd):
         mo.md(f"**Commandes :** Dates converties."),
         mo.md(f"**Géolocalisation :** Réduite de {df_geo.shape[0]} lignes à {df_geo_clean.shape[0]} codes postaux uniques.")
     ])
-    return df_geo, df_geo_clean, df_orders, df_products, df_reviews
+    return (
+        df_customers,
+        df_geo,
+        df_geo_clean,
+        df_items,
+        df_orders,
+        df_payments,
+        df_products,
+        df_reviews,
+        df_sellers,
+    )
 
 
 @app.cell
@@ -233,6 +243,128 @@ def _(df_geo, df_geo_clean, df_orders, df_products, df_reviews, mo):
         mo.md("### 4. Nettoyage des Nulls (Avis)"),
         mo.md("Nombre de valeurs nulles restantes :"),
         check_reviews
+    ])
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    # Modélisation et Ingestion en Base de Données (SQLite)
+
+    Nous allons structurer la base de données relationnelle autour de la table de faits centrale : **orders**.
+
+    ### Le Schéma Relationnel
+    Voici comment les tables seront connectées :
+
+    1.  **orders (Table de Faits)** : Le cœur du système.
+        * *Clé Primaire :* order_id
+        * *Clés Étrangères :* customer_id
+
+    2.  **order_items (Table de Liaison)** : Relie une commande à des produits et des vendeurs.
+        * *Clés Étrangères :* order_id, product_id, seller_id
+
+    3.  **Tables de Dimension (Le "Qui" et "Quoi")** :
+        * **products** : Détails des articles (catégorie, taille).
+        * **customers** : Infos clients (localisation).
+        * **sellers** : Infos vendeurs.
+        * **geolocation** : Table de référence pour les codes postaux (zip_code_prefix).
+
+    4.  **Tables de Détails (Attributs de la commande)** :
+        * **order_payments** : Comment la commande a été payée.
+        * **order_reviews** : La note et le commentaire laissés par le client.
+
+    ---
+    **Objectif Technique :** Créer le fichier `olist.db`, insérer les DataFrames nettoyés, et indexer les colonnes clés pour accélérer les futures requêtes SQL.
+    """)
+    return
+
+
+@app.cell
+def _(
+    df_customers,
+    df_geo_clean,
+    df_items,
+    df_orders,
+    df_payments,
+    df_products,
+    df_reviews,
+    df_sellers,
+    mo,
+):
+    import sqlalchemy
+
+    # Configuration du moteur SQL
+    db_name = "olist.db"
+    # Le fichier sera créé à la racine (ou dans le dossier courant selon l'exécution)
+    engine = sqlalchemy.create_engine(f"sqlite:///{db_name}")
+
+    # On prépare un dictionnaire pour itérer proprement
+    # Assure-toi que ces variables sont bien disponibles depuis l'étape précédente
+    tables_to_insert = {
+        "orders": df_orders,
+        "order_items": df_items,  # Celui-ci n'avait pas besoin de nettoyage spécifique
+        "products": df_products,
+        "customers": df_customers, # Idem, brut
+        "sellers": df_sellers,     # Idem, brut
+        "order_payments": df_payments, # Idem, brut
+        "order_reviews": df_reviews,
+        "geolocation": df_geo_clean
+    }
+
+    status_messages = []
+
+    # Boucle d'insertion
+    for table_name, df in tables_to_insert.items():
+        try:
+            # chunksize : insère par paquets pour ne pas saturer la mémoire
+            df.to_sql(name=table_name, con=engine, if_exists="replace", index=False, chunksize=10000)
+            status_messages.append(f"Table '{table_name}' générée ({len(df)} lignes).")
+        except Exception as e:
+            status_messages.append(f"Erreur sur '{table_name}' : {str(e)}")
+
+    mo.vstack([
+        mo.md("### Journal d'Ingestion SQL"),
+        mo.md("\n".join(f"* {msg}" for msg in status_messages))
+    ])
+    return engine, sqlalchemy
+
+
+@app.cell
+def _(engine, mo, sqlalchemy):
+    # Création des index pour accélérer les requêtes futures
+    # On utilise du SQL brut via SQLAlchemy
+    with engine.connect() as conn:
+        # Liste des index à créer : (Table, Colonne)
+        indices = [
+            ("orders", "order_id"),
+            ("orders", "customer_id"),
+            ("order_items", "order_id"),
+            ("order_items", "product_id"),
+            ("order_items", "seller_id"),
+            ("products", "product_id"),
+            ("customers", "customer_id"),
+            ("customers", "customer_unique_id"),
+            ("sellers", "seller_id"),
+            ("geolocation", "geolocation_zip_code_prefix")
+        ]
+    
+        index_log = []
+        for table, coll in indices:
+            try:
+                index_name = f"idx_{table}_{coll}"
+                # On supprime l'index s'il existe déjà pour éviter les erreurs
+                conn.execute(sqlalchemy.text(f"DROP INDEX IF EXISTS {index_name}"))
+                # Création de l'index
+                conn.execute(sqlalchemy.text(f"CREATE INDEX {index_name} ON {table} ({coll})"))
+                index_log.append(f"Index créé : {index_name}")
+            except Exception as e:
+                index_log.append(f"Erreur index {table}.{coll} : {e}")
+
+    mo.vstack([
+        mo.md("### Optimisation (Indexation)"),
+        mo.md("Les index permettent d'accélérer les jointures SQL."),
+        mo.md(f"_{len(index_log)} index créés avec succès._")
     ])
     return
 
