@@ -348,7 +348,7 @@ def _(engine, mo, sqlalchemy):
             ("sellers", "seller_id"),
             ("geolocation", "geolocation_zip_code_prefix")
         ]
-    
+
         index_log = []
         for table, coll in indices:
             try:
@@ -367,6 +367,8 @@ def _(engine, mo, sqlalchemy):
         mo.md(f"_{len(index_log)} index créés avec succès._")
     ])
     return
+
+
 
 
 if __name__ == "__main__":
