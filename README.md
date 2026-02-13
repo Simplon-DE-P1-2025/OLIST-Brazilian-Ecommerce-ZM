@@ -209,6 +209,7 @@ Le notebook s'ouvrira dans votre navigateur avec une interface interactive.
 OLIST-Brazilian-Ecommerce-ZM/
 │
 ├── 📂 src/
+│   ├── analysis_utils.py       # Helpers SQL (timing + plan)
 │   └── extract.py              # Script d'extraction depuis Kaggle
 │
 ├── 📂 data/
@@ -216,9 +217,23 @@ OLIST-Brazilian-Ecommerce-ZM/
 │
 ├── 📂 notebooks/
 │   ├── explore.py              # Notebook Marimo interactif (ETL complet)
+│   ├── analysis.py             # Notebook Marimo (analyses + data viz)
 │   └── __marimo__/
 │       └── session/
-│           └── explore.py.json # État de session Marimo
+│           ├── explore.py.json # État de session Marimo
+│           └── analysis.py.json # État de session Marimo
+│
+├── 📂 sql/                      # Requêtes d'analyse (9 scripts SQL)
+│   ├── 1_sales_evolution.sql
+│   ├── 1_sales_evolution_simple.sql
+│   ├── 2_top_products.sql
+│   ├── 3_sales_daily.sql
+│   ├── 4_new_vs_returning.sql
+│   ├── 5_average_basket.sql
+│   ├── 6_conversion_rate.sql
+│   ├── 7_rfm_analysis.sql
+│   ├── 8_cohort_retention.sql
+│   └── 9_cohort_ltv.sql
 │
 ├── 📄 requirements.txt         # Dépendances Python
 ├── 📄 .env                     # Variables d'environnement (Kaggle API)
@@ -253,7 +268,13 @@ marimo edit notebooks/explore.py
 4. Vérifiez les rapports de validation
 5. Créez la base de données `olist.db`
 
-#### **Étape 3 : Requêtes SQL (Exemple)**
+#### **Étape 3 : Analyses & Visualisations**
+```bash
+marimo edit notebooks/analysis.py
+```
+↳ Lance le notebook d'analyses. Il exécute les requêtes SQL du dossier `sql/` et affiche les graphiques.
+
+#### **Étape 4 : Requêtes SQL (Exemple)**
 ```bash
 sqlite3 olist.db
 ```
@@ -310,6 +331,22 @@ LIMIT 5;
 - `seller_id` → `sellers.seller_id`
 
 ---
+
+## 📊 Analyses Disponibles
+
+Le notebook `notebooks/analysis.py` s'appuie sur les requêtes du dossier `sql/` :
+
+1. **CA mensuel & croissance** (`1_sales_evolution.sql`)
+2. **Benchmark optimisé vs non-optimisé** (`1_sales_evolution_simple.sql`)
+3. **Top 10 produits** (`2_top_products.sql`)
+4. **CA quotidien** (`3_sales_daily.sql`)
+5. **Nouveaux vs récurrents** (`4_new_vs_returning.sql`)
+6. **Panier moyen (AOV)** (`5_average_basket.sql`)
+7. **Taux de conversion transactionnel** (`6_conversion_rate.sql`)
+8. **Segmentation RFM** (`7_rfm_analysis.sql`)
+9. **Rétention & LTV par cohortes** (`8_cohort_retention.sql`, `9_cohort_ltv.sql`)
+
+Le module `src/analysis_utils.py` gère le timing d'exécution et l'affichage des plans de requêtes.
 
 ## 📊 Insights Clés Identifiés
 
